@@ -2,7 +2,7 @@
 
 > 状态：设计已定稿（2026-06-29），等 DataScaler staging 凭证联调
 > 上游契约：DataScaler Partner API v0.1（`pangolin-partner-api-接入指南.md`）
-> 仓库：`pangolinfo-social-mcp`（本仓，纯转发层）+ `crawler-ext-service`（Java，新增 social 模块，扣费在此）
+> 仓库：`pangolinfo-datascaler-mcp`（本仓，纯转发层）+ `crawler-ext-service`（Java，新增 social 模块，扣费在此）
 
 ---
 
@@ -18,7 +18,7 @@
 ```
 ┌─ AI 客户端
 │   ↓ Authorization: Bearer <Pangolin key>   (复用现有 MCP 鉴权，JWT/pgl_ 都收)
-├─ pangolinfo-social-mcp        【本仓 · 纯转发层】
+├─ pangolinfo-datascaler-mcp    【本仓 · 纯转发层】
 │   · 工具定义 + server instructions + 面向用户话术（全部 Pangolin 写）
 │   · 不持 DataScaler 凭证、不知道扣费、不碰额度
 │   · 职责：MCP 协议转换 + 异步轮询编排（工具描述引导）+ 错误透传翻译

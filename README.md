@@ -1,4 +1,4 @@
-# pangolinfo-social-mcp
+# pangolinfo-datascaler-mcp
 
 Pangolin 白标 **品牌社媒洞察 MCP** —— 在 DataScaler Partner API 之上自建的 MCP server（纯转发层）。
 
@@ -8,7 +8,7 @@ Pangolin 白标 **品牌社媒洞察 MCP** —— 在 DataScaler Partner API 之
 **不持 DataScaler 凭证、不做扣费、不碰额度**。凭证缓存、`externalUserId` 注入、扣费、错误映射全部在 Java 后端 `crawler-ext-service` 的 social 模块。
 
 ```
-AI 客户端 → pangolinfo-social-mcp（本仓，转发）
+AI 客户端 → pangolinfo-datascaler-mcp（本仓，转发）
           → crawler-ext-service /extapi/social/*（Java，扣费在此）
           → DataScaler Partner API
 ```
