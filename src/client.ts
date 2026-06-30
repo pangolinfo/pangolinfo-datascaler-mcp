@@ -41,8 +41,9 @@ export class DataScalerClient {
     };
   }
 
-  async post(path: string, body: unknown): Promise<unknown> {
-    return this.request("POST", path, body);
+  /** opts.deadlineMs:覆盖默认超时。analyze 这种同步重操作要传更长值(见 DEFAULT_DEADLINE_MS)。 */
+  async post(path: string, body: unknown, opts?: { deadlineMs?: number }): Promise<unknown> {
+    return this.request("POST", path, body, opts?.deadlineMs);
   }
 
   async patch(path: string, body: unknown): Promise<unknown> {
@@ -57,13 +58,16 @@ export class DataScalerClient {
     method: "GET" | "POST" | "PATCH",
     path: string,
     body?: unknown,
+    deadlineOverrideMs?: number,
   ): Promise<unknown> {
     const url = `${this.baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
 
-    // Client-side hard timeout. social 端点都是请求-响应(refresh/analyze 也只返 jobId,
-    // 秒回 —— 真正的采集/分析是后台异步,由 agent 轮询 get_refresh_progress),
-    // 所以统一用一个适中的 deadline。
-    const deadlineMs = 60_000;
+    // Client-side hard timeout.
+    // 多数 social 端点请求-响应,refresh/setup 只返 jobId(秒回),只读秒回 —— 默认 60s 足够。
+    // 例外:analyze 是【同步】出报告(实测 30-60s+,DataScaler 实时跑 RAG+LLM),
+    //   需要工具侧传更长的 deadlineMs(见 analyze_brand.ts),否则会被这里掐断成假 NETWORK 超时。
+    const DEFAULT_DEADLINE_MS = 60_000;
+    const deadlineMs = deadlineOverrideMs && deadlineOverrideMs > 0 ? deadlineOverrideMs : DEFAULT_DEADLINE_MS;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), deadlineMs);
 

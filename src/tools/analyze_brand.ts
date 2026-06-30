@@ -82,9 +82,12 @@ Don't use: for ready metrics/posts (get_brand_metrics/search_brand_posts, free);
   async execute(input, ctx) {
     const { brandId, ...body } = input;
     ctx.logger.info(`analyze_brand: brandId=${brandId}`);
+    // analyze 是同步出报告(DataScaler 实时跑 RAG+LLM,实测 30-60s+),
+    // 给 180s deadline,避免被 client 默认 60s 掐断成假超时。
     return ctx.client.post(
       `/api/v1/social/brands/${encodeURIComponent(brandId)}/analyze`,
       body,
+      { deadlineMs: 180_000 },
     );
   },
 };
