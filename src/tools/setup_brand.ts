@@ -48,8 +48,8 @@ const inputSchema = z.object({
     .optional()
     .describe(
       t({
-        zh: "幂等键(可选,建议带)。网络重试时复用同一个值,避免重复建品牌/重复扣费。",
-        en: "Idempotency key (optional, recommended). Reuse the same value on retries to avoid duplicate brand / double-charge.",
+        zh: "幂等键(可选,建议带)。网络重试时复用同一个值,避免重复建品牌/重复扣费:默认 24 小时内,同一个键命中会直接返回上次结果、不重跑不重扣;但同一个键若换了不同参数会报冲突错(换参数请换新键)。",
+        en: "Idempotency key (optional, recommended). Reuse the same value on retries to avoid a duplicate brand / double-charge: within ~24h a repeat with the same key replays the previous result (no re-run, no re-charge); reusing the same key with DIFFERENT params returns a conflict error (use a new key for new params).",
       }),
     ),
 });
