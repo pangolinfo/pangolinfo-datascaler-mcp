@@ -310,3 +310,36 @@ semantic/onboarding/summary/analyze/refresh/list_brands)。响应结构 `{ok,dat
 ### 不修(决策):P1-原扣费失败不退(A1 产品策略)、幂等(YAGNI)、若干 P3 纵深防御(social 链路基本不可达)。
 
 验证:Java BUILD SUCCESS;MCP tsc+build+冒烟 17 工具;**staging e2e 实测 4 工具通过,days=30(number) 正常**。
+
+---
+
+## 15. v0.3 知识空间大改造(2026-07-02)
+
+DataScaler 发布 v0.3 接入指南,重大变化。基于新指南 + staging 全面实测(见 `docs/v03-staging-probe-findings.md`)完成端到端改造。
+
+### 核心变化
+1. **知识空间(默认接入)**:`prepare_space`(出计划,免费)→ `create_space`(建空间+首采,扣费)。空间底层=品牌,spaceId=brandId。`setup_brand`(完整品牌)降为高级用法。
+2. **计费改积分模型**:采集按 `(1+竞品)×渠道×页数×0.25` 算 credits,**采集完成时结算**;取代旧的"受理即扣固定价"。
+   - Java 计费:`chargeByEstimate` 先调上游拿 `data.billing.estimatedCredits`,再按 `estimatedCredits × creditToPointRatio`(默认 600,向上取整)扣 Pangolin 积分。analyze 固定 1 credit。
+   - v1.0 chargedAmount===estimatedCredits(无实采校准),受理时按预估扣即准确。
+   - 零售倍率 `datascaler.credit-to-point-ratio` 可配(成本参考:1 credit≈$1,Pangolin $19=9600积分→1credit≈505积分成本,默认 600≈1.2x)。
+3. **depth 深度**:quick=3/standard=5/full=10 页。refresh 加 depth/maxPages,移除 idempotencyKey(v0.3 schema 不用)。
+4. **一批新端点全部实测可用**:context/actions/errors-explain/usage/usage-events/diagnose/refresh-wait/spaces-prepare/spaces。
+
+### MCP:17→25 工具
+新增 8 个:get_context / suggest_next_actions / get_usage / explain_error / prepare_space / create_space / diagnose_brand / wait_for_refresh。
+改造:refresh_brand(+depth/maxPages,-idempotencyKey)、setup_brand(-idempotencyKey,标高级)、analyze_brand(1 credit)。
+新增 **SERVER_INSTRUCTIONS** 剧本(双语,引导 AI 默认走知识空间 + 异步轮询 + 计费 + 报错处理)。
+
+### Java:新增全部端点转发 + 计费重构
+- SocialService/Impl/Controller 全重写:新增 spaces/context/actions/usage/usage-events/diagnose/wait/errors-explain/schedule/competitors 转发。
+- 计费从 `chargeThen(固定价)` → `chargeByEstimate(读 estimatedCredits)` + `chargeFixed(analyze 1cr)`,保持反应式(boundedElastic)。
+- DataScalerClient 加 put();DataScalerProperties 加 creditToPointRatio。
+
+### 验证(2026-07-02 staging e2e 全绿)
+get_context / prepare_space(三档估算) / create_space(estimatedCredits=1.5,chargedOn=completion) / wait_for_refresh(billingIntent.pending) / diagnose_brand / amazon 400 引导 / explain_error / get_usage(逐条) / metrics(真实数据) —— 9 步全通。
+Java BUILD SUCCESS;MCP tsc+build+冒烟 25 工具 + instructions。
+
+### 待业务确认(醒后)
+- `credit-to-point-ratio` 默认 600,业务定价后调整(见 §15 成本推导)。
+- 生产凭证(staging 已通)。

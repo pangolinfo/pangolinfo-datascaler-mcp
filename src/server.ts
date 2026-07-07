@@ -37,7 +37,7 @@ import { z, ZodError } from "zod";
 // resolve `t({zh,en})` at their own top level) see the correct locale
 // by the time they're evaluated. Keeping it as the first local import
 // makes the ordering explicit. See CONTRACT-i18n.md §2.2.
-import { getLocale } from "./i18n.js";
+import { getLocale, t } from "./i18n.js";
 import { loadAuth } from "./auth.js";
 import { DataScalerClient } from "./client.js";
 import { CONFIG } from "./config.js";
@@ -63,6 +63,43 @@ const logger: ToolLogger = {
  * out lets the HTTP path build a fresh Server-per-request with the
  * caller's API key, while stdio builds it once at boot.
  */
+/**
+ * 面向 AI 的顶层剧本(MCP instructions)。用当前 locale 解析,让 agent 一上来就知道
+ * 默认怎么接入、扣费/异步语义、别踩的坑。工具各自的 description 是细节,这里是全局策略。
+ */
+const SERVER_INSTRUCTIONS = t({
+  zh: `Pangolin 品牌社媒洞察(白标)。监测品牌/话题在社媒(TikTok/X/YouTube/Instagram/Facebook/Pinterest/Trustpilot)的声量、情感、竞品、风险,并做 AI 深度分析。
+
+接入策略(重要):
+1. 首次接入先调 social_capabilities(自省) 或 get_context(实时账户/品牌/额度)。
+2. 用户想"看看某品牌/话题在讨论什么" → 默认走【知识空间】轻量快道:
+   a) prepare_space(query) 出计划(行业候选+建议关键词+渠道+三档深度及每档 estimatedCredits),不扣费;
+   b) 把行业候选和费用(estimatedCredits)给用户看,让用户确认【行业(必选)+渠道+深度】;
+   c) create_space(name, industries, platforms, depth) 建空间并首采(扣费,返回 spaceId + 采集 jobId)。
+3. 只有用户明确要长期精细监测(竞品对比/官网/定时刷新/Amazon 评论)才用 setup_brand(完整品牌)。
+
+异步与轮询:采集是异步的。create_space/refresh_brand/setup_brand 立即返回 jobId,**绝不要阻塞干等**;用 get_refresh_progress(jobId) 轮询到 status=completed/partial,或 wait_for_refresh 短等。完成后才有数据可读/可分析。analyze_brand 是同步的(直接返回报告,可能耗时,耐心等)。
+
+计费:只读全免费。采集按 estimatedCredits 计(采集完成时结算);analyze 每次 1 credit。采集前务必用 prepare_space 的 estimatedCredits 给用户报价确认。
+
+报错处理:data not ready → 先 diagnose_brand / refresh_brand;额度不足 → 引导用户充值(错误里有 links);不懂的错误码 → explain_error。知识空间不支持 Amazon(报 400 时改用 setup_brand)。品牌数据按用户隔离,只看得到自己的。`,
+  en: `Pangolin brand social insight (white-label). Monitor a brand/topic's voice/sentiment/competitors/risk across social platforms (TikTok/X/YouTube/Instagram/Facebook/Pinterest/Trustpilot), plus AI deep analysis.
+
+Onboarding strategy (important):
+1. On first use call social_capabilities (introspection) or get_context (live account/brands/quota).
+2. When a user wants to "see what's being said about brand/topic X" → default to the lightweight Knowledge Space path:
+   a) prepare_space(query) → plan (industry candidates + suggested keywords + platforms + 3 depth tiers each with estimatedCredits), no charge;
+   b) show the industry candidates and cost (estimatedCredits) to the user and confirm [industry (required) + platforms + depth];
+   c) create_space(name, industries, platforms, depth) → creates the space + first collection (charged; returns spaceId + collection jobId).
+3. Use setup_brand (full brand) only when the user explicitly wants long-term fine-grained monitoring (competitor comparison / official site / scheduled refresh / Amazon reviews).
+
+Async & polling: collection is async. create_space/refresh_brand/setup_brand return a jobId immediately — NEVER busy-wait; poll get_refresh_progress(jobId) until status=completed/partial, or wait_for_refresh briefly. Data is readable/analyzable only after completion. analyze_brand is synchronous (returns the report directly; may take a while).
+
+Billing: all reads free. Collection is charged by estimatedCredits (settled on completion); analyze = 1 credit each. Always quote the cost from prepare_space's estimatedCredits before collecting.
+
+Errors: data not ready → diagnose_brand / refresh_brand first; out of quota → guide the user to top up (error carries links); unknown code → explain_error. Knowledge spaces don't support Amazon (on 400, use setup_brand). Brand data is per-user isolated.`,
+});
+
 function buildServer(ctx: ToolContext): Server {
   const toolsByName = new Map<string, Tool>(tools.map((t) => [t.name, t]));
 
@@ -75,6 +112,7 @@ function buildServer(ctx: ToolContext): Server {
       capabilities: {
         tools: {},
       },
+      instructions: SERVER_INSTRUCTIONS,
     },
   );
 

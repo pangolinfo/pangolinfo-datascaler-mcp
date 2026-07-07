@@ -48,8 +48,8 @@ const inputSchema = z.object({
     .optional()
     .describe(
       t({
-        zh: "幂等键(可选)。重试同 key 不重复建品牌/重复扣费。不传则后端自动生成。",
-        en: "Idempotency key (optional). Same key won't re-create or double-charge. Auto-generated if omitted.",
+        zh: "幂等键(可选,建议带)。网络重试时复用同一个值,避免重复建品牌/重复扣费。",
+        en: "Idempotency key (optional, recommended). Reuse the same value on retries to avoid duplicate brand / double-charge.",
       }),
     ),
 });
@@ -58,15 +58,17 @@ export const setupBrand: Tool<typeof inputSchema> = {
   name: "setup_brand",
   description: t({
     zh: `[接入新品牌 · 扣费] 创建一个要监测的品牌,并立即触发首轮社媒采集。
+这是**完整品牌**接入(含竞品/官网/定时),是显式高级用法;想快速看某品牌讨论用 create_space(知识空间)更轻。
 同步:立刻创建品牌并返回 brandId。异步:同时启动一个首采任务,其 jobId 也在返回里 —— 用 get_refresh_progress(jobId) 轮询首采进度,完成后才有数据可读/可分析。
-扣费:建品牌成功即扣不退。
+扣费:按 estimatedCredits 采集完成时结算。
 建议:建品牌前先用 prepare_brand_onboarding(品牌名)拿到关键词/平台/竞品建议,再带进来(免费)。
 Returns: { brandId, jobId, ... }。
 Use when: 用户要新增一个品牌做社媒洞察。
 Don't use: 品牌已存在(用 list_brands 找,update_brand 改配置)。`,
     en: `[Onboard a brand · CHARGED] Create a brand to monitor and immediately trigger first-round collection.
+This is **full brand** onboarding (competitors/website/scheduling) — an explicit advanced path; to quickly see discussion about a brand, create_space (knowledge space) is lighter.
 Sync: creates the brand and returns brandId right away. Async: also starts a first-collection job whose jobId is in the response — poll it with get_refresh_progress(jobId); data is readable/analyzable once it finishes.
-Charge: charged on success (brand created), non-refundable.
+Charge: settled by estimatedCredits when collection completes.
 Tip: call prepare_brand_onboarding(name) first for keyword/platform/competitor suggestions (free), then pass them here.
 Returns: { brandId, jobId, ... }.
 Use when: user wants to add a new brand for social insight.

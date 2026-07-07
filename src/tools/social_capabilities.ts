@@ -1,8 +1,8 @@
 /**
  * Tool: social_capabilities —— 自省(免费,无后端调用)。
  *
- * AI 第一次接入本 MCP 时建议先调:一次拿到工具全景、扣费项、异步轮询规则、
- * 典型工作流,避免边试边猜。纯本地数据,0 扣费,不打后端。
+ * AI 第一次接入时建议先调:一次拿到工具全景、默认接入路径(知识空间)、扣费规则、
+ * 异步轮询规则、典型工作流。纯本地数据,0 扣费,不打后端。
  */
 
 import { z } from "zod";
@@ -16,12 +16,12 @@ const inputSchema = z.object({});
 export const socialCapabilities: Tool<typeof inputSchema> = {
   name: "social_capabilities",
   description: t({
-    zh: `[自省 · 免费 · 0 调用] 一次性了解本 MCP 能干什么、怎么串、哪些扣费、异步怎么轮询。
-AI 首次接入建议先调这个,别边试边猜。纯本地数据,不打后端、不扣费。
-Returns: { version, tools[], charging, asyncModel, workflows[], notes[] }。`,
-    en: `[Self-introspection · FREE · 0 backend calls] One call to learn what this MCP does, how tools chain, what's charged, how async polling works.
-Recommended first call on integration. Local data only — no backend call, no charge.
-Returns: { version, tools[], charging, asyncModel, workflows[], notes[] }.`,
+    zh: `[自省 · 免费 · 0 调用] 一次性了解本 MCP:能干什么、默认怎么接入、哪些扣费、异步怎么轮询、典型工作流。
+AI 首次接入建议先调这个(或 get_context 拿实时账户数据)。纯本地数据,不打后端、不扣费。
+Returns: { version, product, onboarding, charging, asyncModel, tools[], workflows[], notes[] }。`,
+    en: `[Self-introspection · FREE · 0 backend calls] One call to learn: what this MCP does, the default onboarding path, what's charged, how async polling works, typical workflows.
+Recommended first call (or get_context for live account data). Local only — no backend call, no charge.
+Returns: { version, product, onboarding, charging, asyncModel, tools[], workflows[], notes[] }.`,
   }),
   inputSchema,
   async execute(_input, ctx) {
@@ -29,25 +29,37 @@ Returns: { version, tools[], charging, asyncModel, workflows[], notes[] }.`,
     return {
       version: SERVER_VERSION,
       product: t({
-        zh: "Pangolin 品牌社媒洞察(白标)。社媒数据采集/语义检索/情感/竞品/深度分析。",
-        en: "Pangolin brand social-media insight (white-label). Collection / semantic search / sentiment / competitors / deep analysis.",
+        zh: "Pangolin 品牌社媒洞察(白标)。监测品牌/话题在 TikTok/X/YouTube/Instagram/Facebook/Pinterest/Trustpilot 等的声量、情感、竞品、风险,并做 AI 深度分析。",
+        en: "Pangolin brand social insight (white-label). Monitor a brand/topic's voice/sentiment/competitors/risk across TikTok/X/YouTube/Instagram/Facebook/Pinterest/Trustpilot, plus AI deep analysis.",
+      }),
+      onboarding: t({
+        zh: "默认走【知识空间】(轻量快道):prepare_space(出计划+费用,免费) → 用户确认行业(必选)+渠道+深度 → create_space(建空间+首采,扣费)。只有要竞品对比/官网/定时监测才用 setup_brand(完整品牌)。",
+        en: "Default path = Knowledge Space (lightweight): prepare_space (plan + cost, free) → user confirms industry (required) + platforms + depth → create_space (create + first collection, charged). Use setup_brand (full brand) only for competitors/website/scheduled monitoring.",
       }),
       charging: t({
-        zh: "只读全免费。仅 3 个操作扣费:setup_brand(建品牌)、refresh_brand(采集)、analyze_brand(深度分析)。受理即扣不退。get_brand_summary 免费。社媒洞察用独立额度池(social_api)。",
-        en: "All reads free. Only 3 charged: setup_brand, refresh_brand, analyze_brand. Charged on acceptance, non-refundable. get_brand_summary is free. Separate credit pool (social_api).",
+        zh: "只读全免费。采集类(create_space/refresh_brand/setup_brand)按 estimatedCredits×零售倍率扣积分,采集完成时结算(受理时按预估扣)。analyze_brand 每次 1 credit(成功才扣)。prepare_space/get_brand_summary 免费。积分公式:(1+竞品)×渠道×页数×0.25。",
+        en: "All reads free. Collection (create_space/refresh_brand/setup_brand) charges estimatedCredits×retail-rate, settled on completion (charged upfront by estimate). analyze_brand = 1 credit/call (on success). prepare_space/get_brand_summary free. Credits = (1+competitors)×channels×pages×0.25.",
       }),
       asyncModel: t({
-        zh: "采集是异步的:refresh_brand / setup_brand(首采)返回 jobId,用 get_refresh_progress(jobId) 轮询到 completed/partial 再读数据,绝不原地干等或重复发起。analyze_brand 是【同步】的,直接返回报告(可能耗时,耐心等)。analyze 前要确保品牌已采集完成。",
-        en: "Collection is async: refresh_brand / setup_brand (first collection) return a jobId; poll get_refresh_progress until completed/partial, then read. analyze_brand is SYNC — returns the report directly (may take a while). Ensure the brand has collected data before analyze.",
+        zh: "采集是异步的:create_space/refresh_brand/setup_brand(首采)返回 jobId,用 get_refresh_progress(jobId) 轮询到 completed/partial 再读数据,或 wait_for_refresh 短等。绝不原地干等或重复发起。analyze_brand 是【同步】的,直接返回报告(可能耗时,耐心等)。",
+        en: "Collection is async: create_space/refresh_brand/setup_brand return a jobId; poll get_refresh_progress until completed/partial, or wait_for_refresh briefly. Never busy-wait or re-trigger. analyze_brand is SYNC — returns the report directly (may take a while).",
       }),
       tools: [
+        { name: "get_context", group: "context", charged: false },
+        { name: "suggest_next_actions", group: "context", charged: false },
+        { name: "get_usage", group: "context", charged: false },
+        { name: "explain_error", group: "context", charged: false },
+        { name: "prepare_space", group: "onboarding", charged: false },
+        { name: "create_space", group: "onboarding", charged: true, async: true },
         { name: "list_brands", group: "brand", charged: false },
         { name: "get_brand", group: "brand", charged: false },
         { name: "prepare_brand_onboarding", group: "brand", charged: false },
-        { name: "setup_brand", group: "brand", charged: true },
+        { name: "setup_brand", group: "brand", charged: true, async: true },
         { name: "update_brand", group: "brand", charged: false },
+        { name: "diagnose_brand", group: "collect", charged: false },
         { name: "refresh_brand", group: "collect", charged: true, async: true },
         { name: "get_refresh_progress", group: "collect", charged: false },
+        { name: "wait_for_refresh", group: "collect", charged: false },
         { name: "get_brand_metrics", group: "data", charged: false },
         { name: "search_brand_posts", group: "data", charged: false },
         { name: "find_posts_about", group: "data", charged: false },
@@ -60,22 +72,22 @@ Returns: { version, tools[], charging, asyncModel, workflows[], notes[] }.`,
       ],
       workflows: [
         t({
-          zh: "新品牌:prepare_brand_onboarding(拿建议) → setup_brand(建+首采,扣费) → get_refresh_progress(等首采) → 读数据。",
-          en: "New brand: prepare_brand_onboarding → setup_brand (charged) → get_refresh_progress → read data.",
+          zh: "看某品牌/话题在讨论什么(默认):prepare_space(出计划+费用) → 确认行业+渠道+深度 → create_space(扣费,返 jobId) → wait_for_refresh/get_refresh_progress(等采集) → get_brand_metrics/analyze_brand。",
+          en: "Explore a brand/topic (default): prepare_space → confirm industry+platforms+depth → create_space (charged, jobId) → wait_for_refresh/get_refresh_progress → get_brand_metrics/analyze_brand.",
         }),
         t({
-          zh: "刷新已有品牌:refresh_brand(扣费) → get_refresh_progress(等完成) → get_brand_metrics / search_brand_posts / get_brand_sentiment。",
-          en: "Refresh existing: refresh_brand (charged) → get_refresh_progress → metrics / posts / sentiment.",
+          zh: "刷新已有品牌:diagnose_brand(看要不要采) → refresh_brand(扣费) → get_refresh_progress(等完成) → 读数据。",
+          en: "Refresh existing: diagnose_brand → refresh_brand (charged) → get_refresh_progress → read data.",
         }),
         t({
-          zh: "深度问答:确认品牌已采集完成 → analyze_brand(扣费,同步,直接返回报告)。只要一句话总结用 get_brand_summary(免费)。",
-          en: "Deep Q&A: ensure brand has data → analyze_brand (charged, sync, returns report directly). For a quick summary use get_brand_summary (free).",
+          zh: "深度问答:确认品牌已采集完成 → analyze_brand(1 credit,同步返回报告)。一句话总结用 get_brand_summary(免费)。",
+          en: "Deep Q&A: ensure data → analyze_brand (1 credit, sync). Quick summary: get_brand_summary (free).",
         }),
       ],
       notes: [
         t({
-          zh: "品牌数据按用户隔离:只看得到自己的品牌。报 data not ready 就先 refresh_brand。",
-          en: "Brand data is per-user isolated. On 'data not ready', run refresh_brand first.",
+          zh: "品牌数据按用户隔离,只看得到自己的。报 data not ready 就先 diagnose_brand / refresh_brand。知识空间不支持 Amazon(要 Amazon 评论用 setup_brand)。采集前用 prepare_space 的 estimatedCredits 给用户报价。",
+          en: "Brand data is per-user isolated. On 'data not ready', diagnose_brand / refresh_brand first. Knowledge spaces don't support Amazon (use setup_brand for Amazon reviews). Quote cost from prepare_space's estimatedCredits before collecting.",
         }),
       ],
     };
