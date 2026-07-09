@@ -5,7 +5,7 @@
  * social_capabilities 放第一位 —— AI 首次接入建议先调(或 get_context 拿实时账户数据)。
  *
  * 默认接入走【知识空间】:prepare_space → create_space。setup_brand 是完整品牌(高级)。
- * 扣费工具:create_space / refresh_brand / setup_brand(采集,按 estimatedCredits) + analyze_brand(1 credit)。
+ * 扣费工具:create_space / refresh_brand / setup_brand(采集,按 estimatedPoints) + analyze_brand(600 points)。
  * 其余全免费(含 prepare_space / get_brand_summary / 所有只读 / context / diagnose / wait / get_billing_rules)。
  * 注:get_usage 已移除(暴露 DataScaler 批发账户用量,白标不对外;用户用量到 pangolinfo.com 查)。
  *

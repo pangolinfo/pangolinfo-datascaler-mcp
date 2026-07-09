@@ -2,7 +2,7 @@
  * Tool: create_space —— 建知识空间 + 首采(扣费,默认接入第二步)。
  *
  * 调 POST /api/v1/social/spaces。建空间只占 1 个品牌位、本身不扣积分;
- * 采集完成时按 estimatedCredits 扣。空间底层就是品牌,返回 spaceId(=brandId),
+ * 采集按 estimatedPoints 记账。空间底层就是品牌,返回 spaceId(=brandId),
  * 后续所有 /brands/{spaceId}/* (数据/分析/进度) 都用它。
  *
  * ⚠️ industries 必填(≥1,来自 prepare_space 的 industryCandidates + 用户确认);缺失后端返 400。
@@ -92,7 +92,7 @@ Use when: prepare_space 之后、用户已确认行业+渠道+页数。
 Don't use: 要竞品对比/官网/定时(用 setup_brand);要 Amazon 评论(用 setup_brand)。
 ⚠️ 复用优先:create_space 只用于「新建」并占一个空间名额。调用前先 list_brands 查已有空间——若同一品牌/同一行业已有可复用空间,改用 refresh_brand 复用(必要时合并关键词后重采),**不要为同一目标重复新建第二个空间**。`,
     en: `[Create space + first collection · CHARGED · default onboarding step 2] Create a knowledge space and start first-round collection.
-Creating a space only takes 1 brand slot (no credit charge itself); credits are charged **on collection completion** by estimatedPoints (charged upfront by estimate).
+Creating a space only takes 1 brand slot (no point charge itself); points are recorded by estimatedPoints after collection acceptance.
 ⚠️ Precondition: call prepare_space first to get industryCandidates, have the user pick **industries (required)**, then call this. 400 if industries missing.
 ⚠️ No amazon (amazon_reviews returns 400 — use setup_brand).
 Async: returns spaceId + collection jobId immediately, does NOT wait. Poll get_refresh_progress(jobId) or wait_for_refresh. Then call read tools / analyze_brand.

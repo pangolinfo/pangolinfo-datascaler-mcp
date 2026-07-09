@@ -2,7 +2,7 @@
  * Tool: analyze_brand —— DataScaler 固定口径深度分析 shortcut(同步,扣费)。
  *
  * 调 POST /api/v1/social/brands/{id}/analyze。同步:直接返回 report 正文(实测无 jobId)。
- * 扣费:命中套餐额度时免费,额度耗尽自动扣 1 credit(成功响应带 billing.chargedAmount=1)。
+ * 扣费:命中套餐额度时免费,额度耗尽自动扣 600 积分(成功响应带 billing.chargedPoints=600)。
  *
  * ⚠️ v0.4:analyze 走 DataScaler **固定分析链路,不支持 systemPromptOverride**。
  *   若要完全用 Pangolin 自己的口吻/结构,改调只读数据端点
@@ -58,15 +58,15 @@ export const analyzeBrand: Tool<typeof inputSchema> = {
   description: t({
     zh: `[深度分析 · 扣费 · 同步] 对某品牌的社媒数据自由提问,直接返回合成报告。
 同步:本工具直接返回 report 正文(不是 jobId,不用轮询),可能耗时较久(通常 30-60s,上限约 100s),请耐心等待。若你的运行环境更早超时,不要立刻重试(后端可能仍在生成且扣费不退),应先确认上次是否已产出。
-扣费:命中套餐额度免费,额度耗尽自动扣 1 credit(成功响应带 billing.chargedAmount=1)。
+扣费:命中套餐额度免费,额度耗尽自动扣 600 积分(成功响应带 billing.chargedPoints=600)。
 前置:品牌需已采集完成 —— 若报 data not ready / refresh in progress,先 refresh_brand 并用 get_refresh_progress 等它完成,再分析。
 ⚠️ 固定口径:analyze 走 DataScaler 固定分析链路,**不支持提示词覆盖**。想完全用自己的口吻/结构,改调只读端点(metrics/posts/find_posts_about/sentiment/voice-share/risk-alerts)后用自己的 LLM 输出。
-Returns: { report, usage, billing? }(report 是报告正文;billing.chargedAmount=1 表示扣了 1 credit)。
+Returns: { report, usage, billing? }(report 是报告正文;billing.chargedPoints=600 表示扣了 600 积分)。
 Use when: 想要 DataScaler 直接给结论的 shortcut。
 Don't use: 想完全控制输出口吻/结构(改用只读端点自己推理);只要指标/帖子(get_brand_metrics/search_brand_posts,免费);一句话摘要(get_brand_summary,免费)。`,
     en: `[Deep analysis · CHARGED · sync] Ask a free-form question over a brand's social data → returns the synthesized report directly.
 Sync: returns the report body directly (not a jobId, no polling). May take a while (usually 30-60s, up to ~100s) — wait for the response. If your host times out earlier, do NOT immediately retry (the backend may still be generating and charges are non-refundable) — confirm whether the previous run produced a result first.
-Charge: free when within plan quota; auto 1 credit once quota is exhausted (success response carries billing.chargedAmount=1).
+Charge: free when within plan quota; auto 600 points once quota is exhausted (success response carries billing.chargedPoints=600).
 Precondition: brand must have collected data — if 'data not ready' / 'refresh in progress', run refresh_brand and wait via get_refresh_progress first.
 Fixed pipeline: analyze runs DataScaler's fixed analysis pipeline and does NOT support prompt override. To fully control tone/structure, call the read-only endpoints (metrics/posts/find_posts_about/sentiment/voice-share/risk-alerts) and reason with your own LLM instead.
 Returns: { report, usage, ... } (report = the report body).
