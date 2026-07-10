@@ -5,8 +5,9 @@
  * 一次调用拿到完整计费口径,不用从各工具 description 里拼。
  *
  * 计费公式(与 DataScaler 后端一致):
- *   credits = 品牌数 × 渠道数 × 关键词数 × 页数 × 0.02
- *   Pangolinfo 积分 = credits × 600 = 品牌数 × 渠道数 × 关键词数 × 页数 × 12
+ *   credits = 品牌数 × 加权渠道单位 × 关键词数 × 页数 × 0.02
+ *   Pangolinfo 积分 = credits × 600 = 品牌数 × 加权渠道单位 × 关键词数 × 页数 × 12
+ *   普通社媒渠道=1,Threads=1,Reddit=2,amazon_reviews 不参与采集公式。
  */
 
 import { z } from "zod";
@@ -31,21 +32,21 @@ Returns: { formula, unitPrice, factors, examples, analyzeBrand, free }.`,
     ctx.logger.info("get_billing_rules");
     return {
       formula: t({
-        zh: "品牌数 × 渠道数 × 关键词数 × 页数 × 12(积分)",
-        en: "brandCount × channelCount × keywordCount × pages × 12 (points)",
+        zh: "品牌数 × 加权渠道单位 × 关键词数 × 页数 × 12(积分)",
+        en: "brandCount × weightedChannelUnits × keywordCount × pages × 12 (points)",
       }),
       unitPrice: t({
-        zh: "12 积分 / 品牌 / 渠道 / 关键词 / 页",
-        en: "12 points / brand / channel / keyword / page",
+        zh: "12 积分 / 品牌 / 渠道单位 / 关键词 / 页;普通渠道=1,Threads=1,Reddit=2",
+        en: "12 points / brand / channel unit / keyword / page; normal channels=1, Threads=1, Reddit=2",
       }),
       factors: {
         brandCount: t({
           zh: "知识空间(create_space)=1;完整品牌(setup_brand/refresh_brand)=1+竞品数(竞品最多 3)",
           en: "Knowledge space (create_space)=1; full brand (setup_brand/refresh_brand)=1+competitors (max 3)",
         }),
-        channelCount: t({
-          zh: "默认 7 社媒(tiktok/instagram/youtube/x/facebook/pinterest/trustpilot);可选 reddit/threads(同价无附加费);amazon_reviews 不参与计费",
-          en: "Default 7 social (tiktok/instagram/youtube/x/facebook/pinterest/trustpilot); optional reddit/threads (same price, no surcharge); amazon_reviews excluded from billing",
+        weightedChannelUnits: t({
+          zh: "默认 7 社媒各按 1 个渠道单位计(tiktok/instagram/youtube/x/facebook/pinterest/trustpilot);可选 threads=1、reddit=2;amazon_reviews 不参与采集公式",
+          en: "Default 7 social platforms each count as 1 channel unit (tiktok/instagram/youtube/x/facebook/pinterest/trustpilot); optional threads=1, reddit=2; amazon_reviews is excluded from collection billing",
         }),
         keywordCount: t({
           zh: "默认生成约 12 个英文关键词(随品牌浮动,上限 30);用户可自定义 1-30 个。计费按实际关键词数",
@@ -58,16 +59,20 @@ Returns: { formula, unitPrice, factors, examples, analyzeBrand, free }.`,
       },
       examples: [
         t({
-          zh: "知识空间、4 渠道、12 关键词、3 页:1×4×12×3×12 = 1728 积分",
-          en: "Knowledge space, 4 channels, 12 keywords, 3 pages: 1×4×12×3×12 = 1728 points",
+          zh: "知识空间、4 个普通渠道单位、12 关键词、3 页:1×4×12×3×12 = 1728 积分",
+          en: "Knowledge space, 4 normal channel units, 12 keywords, 3 pages: 1×4×12×3×12 = 1728 points",
         }),
         t({
-          zh: "知识空间、7 渠道、12 关键词、10 页:1×7×12×10×12 = 10080 积分",
-          en: "Knowledge space, 7 channels, 12 keywords, 10 pages: 1×7×12×10×12 = 10080 points",
+          zh: "知识空间、默认 7 渠道单位、12 关键词、10 页:1×7×12×10×12 = 10080 积分",
+          en: "Knowledge space, default 7 channel units, 12 keywords, 10 pages: 1×7×12×10×12 = 10080 points",
         }),
         t({
-          zh: "标准 VOC 报告(完整品牌 1+3竞品=4 品牌)×7 渠道×12 关键词×10 页:4×7×12×10×12 = 40320 积分",
-          en: "Standard VOC report (full brand 1+3 competitors=4) × 7 channels × 12 keywords × 10 pages: 4×7×12×10×12 = 40320 points",
+          zh: "知识空间、默认 7 社媒 + Reddit、12 关键词、10 页:1×(7+2)×12×10×12 = 12960 积分",
+          en: "Knowledge space, default 7 social + Reddit, 12 keywords, 10 pages: 1×(7+2)×12×10×12 = 12960 points",
+        }),
+        t({
+          zh: "标准 VOC 报告(完整品牌 1+3竞品=4 品牌)×7 渠道单位×12 关键词×10 页:4×7×12×10×12 = 40320 积分",
+          en: "Standard VOC report (full brand 1+3 competitors=4) × 7 channel units × 12 keywords × 10 pages: 4×7×12×10×12 = 40320 points",
         }),
       ],
       analyzeBrand: t({

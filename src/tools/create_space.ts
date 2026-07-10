@@ -40,8 +40,8 @@ const inputSchema = z.object({
     .optional()
     .describe(
       t({
-        zh: "用户确认的社媒渠道(可选,默认 7 社媒;reddit/threads 同价)。仅支持 tiktok/instagram/youtube/x/facebook/pinterest/trustpilot/reddit/threads;知识空间不支持 amazon_reviews。",
-        en: "Confirmed social platforms (optional, default 7 social; reddit/threads same price). Only tiktok/instagram/youtube/x/facebook/pinterest/trustpilot/reddit/threads; Knowledge Spaces do not support amazon_reviews.",
+        zh: "用户确认的社媒渠道(可选,默认 7 社媒各=1渠道单位;threads=1,reddit=2)。仅支持 tiktok/instagram/youtube/x/facebook/pinterest/trustpilot/reddit/threads;知识空间不支持 amazon_reviews。",
+        en: "Confirmed social platforms (optional, default 7 social platforms each=1 channel unit; threads=1, reddit=2). Only tiktok/instagram/youtube/x/facebook/pinterest/trustpilot/reddit/threads; Knowledge Spaces do not support amazon_reviews.",
       }),
     ),
   maxPages: z

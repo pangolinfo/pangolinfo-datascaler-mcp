@@ -45,15 +45,17 @@ prepare_space (免费出计划/estimatedPoints)
 只读工具全免费。采集类工具 `create_space` / `refresh_brand` / `setup_brand` 在上游受理成功并返回预估后,按 Pangolinfo 积分口径记账:
 
 ```text
-积分 = 品牌数 * 渠道数 * 关键词数 * 页数 * 12
+积分 = 品牌数 * 加权渠道单位 * 关键词数 * 页数 * 12
 ```
 
 对应 DataScaler v1.1:
 
 ```text
-credits = 品牌数 * 渠道数 * 关键词数 * 页数 * 0.02
+credits = 品牌数 * 加权渠道单位 * 关键词数 * 页数 * 0.02
 积分 = credits * 600
 ```
+
+渠道单位:普通社媒渠道=1,`threads`=1,`reddit`=2,`amazon_reviews` 不参与采集公式。
 
 `analyze_brand` 是同步深度分析,成功按 600 积分/次记账。`get_brand_summary` 免费。
 
@@ -65,7 +67,7 @@ credits = 品牌数 * 渠道数 * 关键词数 * 页数 * 0.02
 tiktok, instagram, youtube, x, facebook, pinterest, trustpilot, reddit, threads
 ```
 
-默认预选 7 个: `tiktok/instagram/youtube/x/facebook/pinterest/trustpilot`。`reddit` 和 `threads` 可选同价。
+默认预选 7 个: `tiktok/instagram/youtube/x/facebook/pinterest/trustpilot`。`threads` 可选且按 1 个渠道单位计,`reddit` 可选但按 2 个渠道单位计。
 
 `amazon_reviews` 不是知识空间渠道。只有完整品牌 `setup_brand` 支持 Amazon Reviews,并且必须传:
 
@@ -93,4 +95,4 @@ npm run dev -- --transport=http --port=3000
 curl http://localhost:3000/health
 ```
 
-生产构建使用 Dockerfile。ACK 部署镜像 tag 以实际发布为准,当前版本为 `0.2.5`。
+生产构建使用 Dockerfile。ACK 部署镜像 tag 以实际发布为准,当前版本为 `0.2.6`。

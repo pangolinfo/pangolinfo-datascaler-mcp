@@ -80,7 +80,7 @@ const SERVER_INSTRUCTIONS = t({
 
 异步与轮询:采集是异步的。create_space/refresh_brand/setup_brand 立即返回 jobId,**绝不要阻塞干等**;用 get_refresh_progress(jobId) 轮询到 status=completed/partial,或 wait_for_refresh 短等。完成后才有数据可读/可分析。analyze_brand 是同步的(直接返回报告,可能耗时,耐心等)。
 
-计费:只读全免费。采集按 品牌数×渠道数×关键词数×页数×12 积分 计(受理成功后按预估记账);analyze_brand 每次 600 积分(成功才扣)。采集前务必用 prepare_space 的 estimatedPoints 给用户报价确认。
+计费:只读全免费。采集按 品牌数×加权渠道单位×关键词数×页数×12 积分 计(普通渠道=1,Threads=1,Reddit=2;受理成功后按预估记账);analyze_brand 每次 600 积分(成功才扣)。采集前务必用 prepare_space 的 estimatedPoints 给用户报价确认。
 
 报错处理:data not ready → 先 diagnose_brand / refresh_brand;额度不足 → 引导用户充值(错误里有 links);不懂的错误码 → explain_error。知识空间不支持 Amazon;如需 Amazon 评论,改用 setup_brand + monitorPlatforms:['amazon_reviews'] + amazonProducts。品牌数据按用户隔离,只看得到自己的。`,
   en: `Pangolinfo brand social insight (white-label). Monitor a brand/topic's voice/sentiment/competitors/risk across social platforms (TikTok/X/YouTube/Instagram/Facebook/Pinterest/Trustpilot), plus AI deep analysis.
@@ -95,7 +95,7 @@ Onboarding strategy (important):
 
 Async & polling: collection is async. create_space/refresh_brand/setup_brand return a jobId immediately — NEVER busy-wait; poll get_refresh_progress(jobId) until status=completed/partial, or wait_for_refresh briefly. Data is readable/analyzable only after completion. analyze_brand is synchronous (returns the report directly; may take a while).
 
-Billing: all reads free. Collection costs brandCount × channelCount × keywordCount × pages × 12 points (estimated at acceptance); analyze_brand costs 600 points on success. Always quote prepare_space's estimatedPoints before collecting.
+Billing: all reads free. Collection costs brandCount × weightedChannelUnits × keywordCount × pages × 12 points (normal channels=1, Threads=1, Reddit=2; estimated at acceptance); analyze_brand costs 600 points on success. Always quote prepare_space's estimatedPoints before collecting.
 
 Errors: data not ready → diagnose_brand / refresh_brand first; out of quota → guide the user to top up (error carries links); unknown code → explain_error. Knowledge spaces don't support Amazon; for Amazon reviews use setup_brand + monitorPlatforms:['amazon_reviews'] + amazonProducts. Brand data is per-user isolated.`,
 });

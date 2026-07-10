@@ -152,7 +152,7 @@ diagnose_brand
 只读工具免费。采集类工具按 Pangolinfo 积分计费:
 
 ```text
-积分 = 品牌数 * 渠道数 * 关键词数 * 页数 * 12
+积分 = 品牌数 * 加权渠道单位 * 关键词数 * 页数 * 12
 ```
 
 AI 深度分析:
@@ -164,6 +164,7 @@ analyze_brand = 600 积分/次
 说明:
 - `prepare_space` 会返回 `estimatedPoints`,采集前应把这个数给用户确认。
 - 采集类工具在采集受理成功后按预估记账。
+- 渠道单位不是简单平台数量:普通社媒渠道=1,`threads`=1,`reddit`=2,`amazon_reviews` 不参与采集公式。
 - `get_context` 会返回当前用户的 `billingMode`:
   - `prepaid`:预付费,从 Pangolinfo 积分余额扣。
   - `postpaid`:后付费,按账期用量记账。
@@ -190,6 +191,11 @@ threads
 ```text
 tiktok, instagram, youtube, x, facebook, pinterest, trustpilot
 ```
+
+计费权重:
+- 普通社媒渠道按 1 个渠道单位计费。
+- `threads` 按 1 个渠道单位计费。
+- `reddit` 按 2 个渠道单位计费。
 
 不支持的平台包括但不限于:
 
@@ -303,4 +309,3 @@ get_context
 ```
 
 然后按用户意图选择知识空间或已有品牌流程。
-
