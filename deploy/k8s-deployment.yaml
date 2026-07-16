@@ -36,7 +36,7 @@ spec:
     spec:
       containers:
         - name: mcp-server
-          image: registry-intl.ap-southeast-1.aliyuncs.com/pangolinfo-prod/datascaler-voc:0.3.3
+          image: registry-intl.ap-southeast-1.aliyuncs.com/pangolinfo-prod/datascaler-voc:0.4.1
           imagePullPolicy: Always
           ports:
             - name: http
