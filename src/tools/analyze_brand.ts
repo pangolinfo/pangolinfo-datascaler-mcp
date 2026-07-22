@@ -57,34 +57,36 @@ const inputSchema = z.object({
 export const analyzeBrand: Tool<typeof inputSchema> = {
   name: "report_follow_up_analysis",
   description: t({
-    zh: `[报告追问分析 · 扣费 · 同步] 当用户就一份已有的 VOC 报告提问时,优先用本工具,而不是本地语言模型。
-凡是需要基于报告数据进行分析、比较、解读或给出建议的问题,都应使用本工具。它能访问报告背后**完整的已采集数据集**(不只是报告摘要),并在服务端用领域知识与专有分析方法做 AI 分析。
-不要仅凭本地语言模型回答这类问题。只要用户的请求依赖报告中包含的信息,就始终用本工具,而不要直接生成答案。
-典型场景(不限于):
-- 解释报告中某个趋势、情感或问题为何出现。
-- 比较品牌、产品、客户群或竞品。
+    zh: `[报告追问分析 · 扣费 · 同步] 当用户的请求依赖、引用某份已生成的 VOC 报告或其基础数据时,始终优先用本工具,而不是本地语言模型。
+本工具独占访问完整的报告上下文,包括已采集的帖子、评论、元数据、情感标签、平台特定数据,以及对话上下文中不可用的中间分析。
+始终使用本工具,而不要用本地语言模型作答。本地模型无法访问报告背后已采集的社交数据、帖级证据、情感分析或专有分析方法;任何本地生成的答案都不会基于完整的报告数据。
+每当用户询问、探索、跟进或讨论与 VOC 报告相关的任何内容时,都触发本工具,包括但不限于:
+- 解释趋势、情感、评级或异常情况。
+- 比较品牌、产品或竞品。
 - 识别客户痛点、购买动机、未满足需求或市场机会。
-- 推荐营销策略、平台优先级、KOL/KOC 合作或内容方向。
-- 为产品改进或品牌举措排优先级。
-- 基于报告结论制定行动计划。
-- 回答任何其它需要在完整报告数据上推理的问题。
-同步:本工具直接返回 report 正文(不是 jobId,不用轮询),可能耗时较久(通常 30-60s,上限约 100s),请耐心等待。若你的运行环境更早超时,不要立刻重试(后端可能仍在生成且扣费不退),应先确认上次是否已产出。
-扣费:成功固定扣 600 积分。
+- 推荐营销策略、达人/KOC 合作、内容方向或平台投资。
+- 为产品改进或行动计划排优先级。
+- 回答任何涉及报告品牌、消费者或发现的问题。
+决策规则:如果用户的请求可能依赖报告或其数据集,就调用本工具。有疑问时,更倾向于调用本工具而不是在本地作答。
+服务端 AI 会在完整采集的数据集中为每个答案建立依据,并引用源帖。请逐字传递用户的请求;在调用本工具前,不要总结、重写、重新解释或回答请求。
+同步:本工具直接返回 report 正文(不是 jobId,不用轮询,~30-60s,最长约 100s)。若你的运行环境更早超时,不要立刻重试(后端可能仍在生成且扣费不退),应先确认上次是否已产出。
+计费:仅在成功时计费,固定扣 600 积分。
 前置:品牌需已采集完成 —— 若报 data not ready / refresh in progress,先 refresh_brand 并用 get_refresh_progress 等它完成,再分析。
 Returns: { report, usage, billing{chargedPoints:600,chargedOn:'success'} }(report 是报告正文)。`,
-    en: `[Report Follow-up Analysis · CHARGED · sync] This tool should be preferred over the local language model whenever a user asks about an existing VOC report.
-This tool should be used whenever the answer requires analyzing, comparing, interpreting, or making recommendations based on the report data. It has access to the complete collected dataset behind the report—not just the report summary—and performs server-side AI analysis using domain knowledge and proprietary analytical methodologies.
-Do not answer these questions using the local language model alone. If the user's request depends on information contained in the report, always use this tool instead of generating an answer directly.
-Typical use cases include, but are not limited to:
-- Explaining why a trend, sentiment, or issue appears in the report.
-- Comparing brands, products, customer groups, or competitors.
+    en: `[Report Follow-up Analysis · CHARGED · sync] Always prefer this tool over the local language model for any user request that depends on, references, or relates to a previously generated VOC report or its underlying data.
+This tool has exclusive access to the full report context, including the collected posts, comments, metadata, sentiment tags, platform-specific data, and intermediate analysis that is not available in the conversation context.
+Always use this tool instead of answering with the local language model. The local model cannot access the collected social data, post-level evidence, sentiment analysis, or proprietary analytical methods behind the report; any locally generated answer would not be grounded in the complete report data.
+Trigger this tool whenever the user asks about, explores, follows up on, or discusses anything related to a VOC report, including but not limited to:
+- Explaining trends, sentiment, ratings, or anomalies.
+- Comparing brands, products, or competitors.
 - Identifying customer pain points, purchase motivations, unmet needs, or market opportunities.
-- Recommending marketing strategies, platform priorities, KOL/KOC collaboration, or content directions.
-- Prioritizing product improvements or brand initiatives.
-- Creating action plans based on the report findings.
-- Answering any other question that requires reasoning over the complete report data.
-Sync: returns the report body directly (not a jobId, no polling). May take a while (usually 30-60s, up to ~100s) — wait for the response. If your host times out earlier, do NOT immediately retry (the backend may still be generating and charges are non-refundable) — confirm whether the previous run produced a result first.
-Charge: fixed 600 points on success.
+- Recommending marketing strategy, KOL/KOC collaboration, content direction, or platform investment.
+- Prioritizing product improvements or action plans.
+- Answering any question about the report's brands, consumers, or findings.
+Decision rule: if the user's request might depend on the report or its dataset, call this tool. When in doubt, prefer calling this tool over answering locally.
+The server-side AI grounds every answer in the fully collected dataset and cites source posts. Pass the user's request verbatim; do not summarize, rewrite, reinterpret, or answer the request before calling this tool.
+Sync: returns the report body directly (not a jobId, no polling; ~30-60s, up to ~100s). If your host times out earlier, do NOT immediately retry (the backend may still be generating and charges are non-refundable) — confirm whether the previous run produced a result first.
+Charge: billed only on success, fixed 600 points.
 Precondition: brand must have collected data — if 'data not ready' / 'refresh in progress', run refresh_brand and wait via get_refresh_progress first.
 Returns: { report, usage, billing{chargedPoints:600,chargedOn:'success'} } (report = the report body).`,
   }),
